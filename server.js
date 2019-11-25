@@ -26,16 +26,15 @@ io.on('connection', function(socket) {
 
         room = new Room();
 
-        // room.generateRoomId(function() {
-        //     player.roomId = room.roomId; 
-        //     console.log('room id is: ' + room.roomId);
-        //     socket.emit('roomId', {roomId: room.roomId});
-        // });
+        room.generateRoomId(function() {
+            console.log('room id is: ' + room.roomId);
 
-        room.roomId = 'popo'
-        rooms[room.roomId] = room;
-        socket.join(player.roomId);
-        socket.emit('roomId', { roomId: 'poop' })
+            player.roomId = room.roomId; 
+            socket.join(player.roomId);
+
+            rooms[room.roomId] = room;
+            socket.emit('roomId', {roomId: room.roomId});
+        });
     });
 
     socket.on('isJoining', function (data) {
@@ -54,6 +53,7 @@ io.on('connection', function(socket) {
             socket.emit('gameDictionary', room.initialDictionary);
             socket.emit('wordsSelected', room.wordsSelected);
             socket.emit('newGameState', room.gameState);
+            socket.emit('joinedRoom');
         }
     });
 
