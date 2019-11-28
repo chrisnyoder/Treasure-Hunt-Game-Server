@@ -12,6 +12,7 @@ module.exports = class Room {
         this.initialDictionary = new Object();
         this.wordsSelected = new Object(); 
         this.gameState = new Object();
+        this.playersInRoom = [];
     }
 
     generateRoomId(callBack) {
@@ -63,7 +64,7 @@ module.exports = class Room {
 
         if(this.roomGenerationAttempts < 6) {
             if (!roomAlreadyExist) {
-                this.addRoomToInstanceAndArray(generatedRoomId, callBack);
+                this.addRoomToThisInstanceAndGlobalArray(generatedRoomId, callBack);
                 this.roomGenerationAttempts = 0; 
             } else {
                 this.generateRoomId(this.results);
@@ -75,7 +76,7 @@ module.exports = class Room {
         }
     }
 
-    addRoomToInstanceAndArray(room, callBack) {
+    addRoomToThisInstanceAndGlobalArray(room, callBack) {
 
         console.log('adding room to array');
 

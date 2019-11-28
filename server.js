@@ -27,13 +27,22 @@ io.on('connection', function(socket) {
         room = new Room();
 
         room.generateRoomId(function() {
-            console.log('room id is: ' + room.roomId);
+            if(room.roomId === 'undefined')
+            {
+                // could not generate a room ID, player is in connected state but not in a room with ID
+                player.isHosting = false;
+            } else 
+            {
+                player.roomId = room.roomId;
+                socket.join(player.roomId);
 
-            player.roomId = room.roomId; 
-            socket.join(player.roomId);
+                rooms[room.roomId] = room;
+                socket.emit('roomId', { roomId: room.roomId });
+                room.playersInRoom.push(player);
 
-            rooms[room.roomId] = room;
-            socket.emit('roomId', {roomId: room.roomId});
+                console.log("number of players in room, server side: " + room.playersInRoom);
+                socket.emit('numberOfPlayersInRoomChanged', { playersInRoom: room.playersInRoom });
+            }
         });
     });
 
@@ -50,12 +59,31 @@ io.on('connection', function(socket) {
         } else 
         {
             console.log('room exist, and the player is being connected');
+            room.playersInRoom.push(player);     
+            var joinedPlayerIndex = determineJoinedPlayerIndex();
+
+            console.log('joined player index is: ' + joinedPlayerIndex);
+            room.initialDictionary.playerIndex = joinedPlayerIndex;
+
+            console.log('Dictionary received on server: ' + JSON.stringify(room.initialDictionary));
+            
             socket.emit('gameDictionary', room.initialDictionary);
             socket.emit('wordsSelected', room.wordsSelected);
             socket.emit('newGameState', room.gameState);
-            socket.emit('joinedRoom');
-        }
+            
+            socket.broadcast.emit('numberOfPlayersInRoomChanged', { playersInRoom: room.playersInRoom });  
+        }   
     });
+
+    function determineJoinedPlayerIndex() {
+        var joinedPlayers = []
+        for (var i = 0; i < room.playersInRoom.length; ++i) {
+            if(!room.playersInRoom[i].isHosting) {
+                joinedPlayers.push(room.playersInRoom[i])
+            }
+        }
+        return (joinedPlayers.length - 1);
+    }
 
     socket.on('gameDictionary', function (data) {
         room.initialDictionary = data;
@@ -81,9 +109,18 @@ io.on('connection', function(socket) {
         delete players[thisPlayerID];
         delete sockets[thisPlayerID];
 
+        if(typeof room !== "undefined") {
+            for(var i = 0; i < room.playersInRoom.length; ++i) {
+                if(room.playersInRoom[i].id == thisPlayerID) {
+                    room.playersInRoom.splice(i, 1);
+                };
+            };
+            socket.emit('numberOfPlayersInRoomChanged', { playersInRoom: room.playersInRoom })
+            socket.broadcast.emit('numberOfPlayersInRoomChanged', { playersInRoom: room.playersInRoom });
+        } 
+
         if(player.isHosting)
         {
-            console.log('dictionary and words selected are cleared')
             delete rooms[room.roomId];
             roomIds.splice(room.roomArrayIndex, 1);
         }
