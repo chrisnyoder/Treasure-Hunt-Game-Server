@@ -36,21 +36,32 @@ io.on('connection', function(socket) {
                 player.roomId = room.roomId;
                 socket.join(player.roomId);
 
-                rooms[room.roomId] = room;
+                console.log('adding room object to rooms array: ' + JSON.stringify(room))
+                rooms.push(room);
+ 
+                console.log('we now have the following rooms: ' + JSON.stringify(rooms))
                 socket.emit('roomId', { roomId: room.roomId });
                 room.playersInRoom.push(player);
 
-                console.log("number of players in room, server side: " + room.playersInRoom);
+                console.log("number of players in room, server side: " + JSON.stringify(room.playersInRoom));
                 socket.emit('numberOfPlayersInRoomChanged', { playersInRoom: room.playersInRoom });
             }
         });
     });
 
     socket.on('isJoining', function (data) {
-        roomId = data.roomId;
+        joiningRoomId = data.roomId;
 
-        socket.join(roomId);
-        room = rooms[roomId];
+        console.log('isJoining callback received');
+        console.log('rooms to join: ' + JSON.stringify(rooms))
+        console.log('joining room: ' + joiningRoomId);
+
+        for (const r of rooms) {
+            console.log('room id: ' + r.roomId);
+            if (r.roomId == joiningRoomId) {
+                room = r;
+            }
+        }
 
         if(typeof room === 'undefined')
         {
@@ -59,6 +70,7 @@ io.on('connection', function(socket) {
         } else 
         {
             console.log('room exist, and the player is being connected');
+            socket.join(joiningRoomId);
             room.playersInRoom.push(player);     
             var joinedPlayerIndex = determineJoinedPlayerIndex();
 
@@ -109,20 +121,38 @@ io.on('connection', function(socket) {
         delete players[thisPlayerID];
         delete sockets[thisPlayerID];
 
+        var playerStillHosting = false;
+
         if(typeof room !== "undefined") {
             for(var i = 0; i < room.playersInRoom.length; ++i) {
                 if(room.playersInRoom[i].id == thisPlayerID) {
+                    console.log('remove player from room');
                     room.playersInRoom.splice(i, 1);
                 };
             };
             socket.emit('numberOfPlayersInRoomChanged', { playersInRoom: room.playersInRoom })
             socket.broadcast.emit('numberOfPlayersInRoomChanged', { playersInRoom: room.playersInRoom });
-        } 
+        }         
 
-        if(player.isHosting)
+        if(typeof room !== "undefined") {
+            for (const pl of room.playersInRoom) {
+                if (pl.isHosting) {
+                    playerStillHosting = true;
+                }
+            }
+        }
+    
+        if(typeof room !== "undefined") {
+            console.log('players in room' + JSON.stringify(room.playersInRoom));
+        }
+
+        if(!playerStillHosting && typeof room !== "undefined")
         {
-            delete rooms[room.roomId];
+            console.log('player no longer hosting, deleting room');
+            rooms.splice(room.roomArrayIndex, 1);
             roomIds.splice(room.roomArrayIndex, 1);
         }
+
+        console.log('rooms: ' + rooms);
     });
 });
