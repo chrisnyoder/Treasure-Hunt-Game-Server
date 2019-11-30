@@ -22,7 +22,7 @@ module.exports = class Room {
 
         var result = ''; 
         var numberOfCharacters = 4; 
-        var charactersToChooseFrom = '0123456789abcdefghijklmnopqrstuvwxyz'; 
+        var charactersToChooseFrom = '123456789abcdefghijklmnpqrstuvwxyz'; 
         for(var i = numberOfCharacters; i > 0; --i) {
             result += charactersToChooseFrom[Math.floor(Math.random() * charactersToChooseFrom.length)]; 
         }; 
@@ -78,7 +78,7 @@ module.exports = class Room {
 
     addRoomToThisInstanceAndGlobalArray(room, callBack) {
 
-        console.log('adding room to array');
+        console.log('adding room ID to array to room ID array');
 
         this.roomId = room;
         roomIds.push(room);
