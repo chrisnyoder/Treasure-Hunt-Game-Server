@@ -140,7 +140,7 @@ io.on('connection', function(socket) {
 
     socket.on('newGameState', function(newGameState) {
         room.gameState = newGameState;
-        console.log('new game state: ' + JSON.stringify(room.newGameState));
+        console.log('new game state: ' + JSON.stringify(room.gameState));
         socket.to(room.roomId).broadcast.emit('newGameState', room.gameState);
     });
 
