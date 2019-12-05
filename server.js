@@ -4,6 +4,7 @@ const Player = require('./player.js');
 const Room = require('./room.js');
 
 console.log('Server has started');
+console.log(rooms.length);
 
 var players = [];
 var sockets = [];
@@ -132,6 +133,7 @@ io.on('connection', function(socket) {
     }
 
     socket.on('gameDictionary', function (data) {
+
         room.initialDictionary = data;
 
         console.log('Dictionary received on server: ' + JSON.stringify(room.initialDictionary));
@@ -157,38 +159,35 @@ io.on('connection', function(socket) {
         delete players[thisPlayerID];
         delete sockets[thisPlayerID];
 
-        var playerStillHosting = false;
 
         if(typeof room !== "undefined") {
+
             for(var i = 0; i < room.playersInRoom.length; ++i) {
                 if(room.playersInRoom[i].id == thisPlayerID) {
                     console.log('remove player from room');
                     room.playersInRoom.splice(i, 1);
                 };
             };
+
             socket.emit('numberOfPlayersInRoomChanged', { playersInRoom: room.playersInRoom })
             socket.broadcast.emit('numberOfPlayersInRoomChanged', { playersInRoom: room.playersInRoom });
-        }         
 
-        if(typeof room !== "undefined") {
+            var playerStillHosting = false;
+
             for (const pl of room.playersInRoom) {
                 if (pl.isHosting) {
                     playerStillHosting = true;
                 }
             }
-        }
-    
-        if(typeof room !== "undefined") {
+
             console.log('players in room' + JSON.stringify(room.playersInRoom));
-        }
-
-        if(!playerStillHosting && typeof room !== "undefined")
-        {
-            console.log('player no longer hosting, deleting room');
-            rooms.splice(room.roomArrayIndex, 1);
-            roomIds.splice(room.roomArrayIndex, 1);
-        }
-
+            
+            if (!playerStillHosting) {
+                console.log('player no longer hosting, deleting room: ' + room.roomId);
+                rooms.splice(room.roomArrayIndex, 1);
+                roomIds.splice(room.roomArrayIndex, 1);
+            }
+        }         
         console.log('rooms: ' + rooms);
     });
 });
