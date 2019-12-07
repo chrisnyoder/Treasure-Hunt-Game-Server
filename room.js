@@ -13,6 +13,7 @@ module.exports = class Room {
         this.wordsSelected = new Object(); 
         this.gameState = new Object();
         this.playersInRoom = [];
+        this.roomDestructionTimer;
     }
 
     generateRoomId(callBack) {
@@ -88,5 +89,23 @@ module.exports = class Room {
 
     results(){
         console.log('roomId: ' + this.room);
+    }
+
+    startRoomDeletionTimer(callback){
+        this.roomDestructionTimer = setTimeout(function() {
+                console.log('room is being deleted')
+                rooms.splice(this.roomArrayIndex, 1);
+                roomIds.splice(this.roomArrayIndex, 1);
+                callback();
+            }, 600000);
+    }
+
+    stopRoomDeletionTimer()
+    {
+        if(typeof this.roomDestructionTimer !== 'undefined')
+        {
+            console.log('deletion timer being cleared')
+            clearTimeout(this.roomDestructionTimer); 
+        }
     }
 }

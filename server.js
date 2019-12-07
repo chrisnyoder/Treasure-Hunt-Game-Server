@@ -40,7 +40,6 @@ io.on('connection', function(socket) {
                 console.log('adding room object to rooms array: ' + JSON.stringify(room))
                 rooms.push(room);
  
-                console.log('we now have the following rooms: ' + JSON.stringify(rooms))
                 socket.emit('roomId', { roomId: room.roomId });
                 room.playersInRoom.push(player);
 
@@ -54,7 +53,6 @@ io.on('connection', function(socket) {
         joiningRoomId = data.roomId;
 
         console.log('isJoining callback received');
-        console.log('rooms to join: ' + JSON.stringify(rooms))
         console.log('joining room: ' + joiningRoomId);
 
         for (const r of rooms) {
@@ -62,6 +60,7 @@ io.on('connection', function(socket) {
             if (r.roomId == joiningRoomId) {
                 room = r;
             }
+            break;
         }
 
         if(typeof room === 'undefined')
@@ -70,21 +69,13 @@ io.on('connection', function(socket) {
             socket.emit('roomNotAvailable');
         } else 
         {
-            console.log('room exist, and the player is being connected');
             socket.join(joiningRoomId);
-            room.playersInRoom.push(player);     
+            
             var joinedPlayerIndex = determineJoinedPlayerIndex();
-
-            console.log('joined player index is: ' + joinedPlayerIndex);
             room.initialDictionary.playerIndex = joinedPlayerIndex;
 
-            console.log('Dictionary received on server: ' + JSON.stringify(room.initialDictionary));
-            
-            socket.emit('gameDictionary', room.initialDictionary);
-            socket.emit('wordsSelected', room.wordsSelected);
-            socket.emit('newGameState', room.gameState);
-            
-            socket.broadcast.emit('numberOfPlayersInRoomChanged', { playersInRoom: room.playersInRoom });  
+            providePlayerGameData();
+            updateRoomCount();
         }   
     });
 
@@ -92,35 +83,77 @@ io.on('connection', function(socket) {
         joiningRoomId = data.roomId;
 
         console.log('isJoiningMainBoard callback received');
-        console.log('rooms to join: ' + JSON.stringify(rooms))
         console.log('joining room: ' + joiningRoomId);
 
         for (const r of rooms) {
-            console.log('room id: ' + r.roomId);
             if (r.roomId == joiningRoomId) {
                 room = r;
             }
+            break;
         }
 
         if (typeof room === 'undefined') {
             console.log('room doesnt exist');
             socket.emit('roomNotAvailable');
         } else {
-            player.isHosting = true;
-
             console.log('room exist, and the player is being connected');
             socket.join(joiningRoomId);
-            room.playersInRoom.push(player);
-
-            console.log('Dictionary received on server: ' + JSON.stringify(room.initialDictionary));
-
-            socket.emit('gameDictionary', room.initialDictionary);
-            socket.emit('wordsSelected', room.wordsSelected);
-            socket.emit('newGameState', room.gameState);
-
-            socket.broadcast.emit('numberOfPlayersInRoomChanged', { playersInRoom: room.playersInRoom });
+            
+            providePlayerGameData();
+            updateRoomCount();
+            checkIfCrewMemberShouldStopDeletionTimer
+            ();
         }   
     });
+
+    socket.on('reconnecting', function(roomId) {
+        console.log('reconnecting callback received');
+        console.log(JSON.stringify(roomId.role));
+
+        var reconnectingRoomId = roomId.roomId;
+        for (const r of rooms) {
+            console.log('room Id ' + r.roomId);
+            console.log('room Id ' + reconnectingRoomId);
+            if (r.roomId == reconnectingRoomId) {
+                room = r;
+                socket.join(reconnectingRoomId);
+                console.log('player reconnected to room: ' + r.roomId);
+                providePlayerGameData();
+                updateRoomCount();
+            }        
+            break;
+        }
+
+        if(typeof room !== 'undefined') {
+            if(roomId.role == 'isHosting') {    
+                checkIfCrewMemberShouldStopDeletionTimer
+                ();
+            } 
+            else {
+                player.isHosting = false;
+            }
+        }
+    });
+
+    function checkIfCrewMemberShouldStopDeletionTimer(){
+        var playerAlreadyHostingRoom = false;
+
+        for (const pl of room.playersInRoom) {
+            console.log('player ID' + pl.id);
+            if (pl.isHosting) {
+                playerAlreadyHostingRoom = true;
+                break;
+            }
+        }
+
+        console.log('still a host left: ' + playerAlreadyHostingRoom);
+        
+        if(playerAlreadyHostingRoom == false) {
+            console.log("stopping the deletion timer");
+            room.stopRoomDeletionTimer()
+        }
+        player.isHosting = true;
+    }
 
     function determineJoinedPlayerIndex() {
         var joinedPlayers = []
@@ -132,11 +165,21 @@ io.on('connection', function(socket) {
         return (joinedPlayers.length - 1);
     }
 
-    socket.on('gameDictionary', function (data) {
+    function providePlayerGameData() {
+        socket.emit('gameDictionary', room.initialDictionary);
+        socket.emit('wordsSelected', room.wordsSelected);
+        socket.emit('newGameState', room.gameState);
+    }
 
+    function updateRoomCount(){
+        room.playersInRoom.push(player);
+        socket.broadcast.emit('numberOfPlayersInRoomChanged', { playersInRoom: room.playersInRoom });
+    }
+
+    socket.on('gameDictionary', function (data) {
         room.initialDictionary = data;
 
-        console.log('Dictionary received on server: ' + JSON.stringify(room.initialDictionary));
+        console.log('Dictionary received on server');
         socket.to(room.roomId).broadcast.emit('gameDictionary', room.initialDictionary);
     });
 
@@ -150,15 +193,15 @@ io.on('connection', function(socket) {
         room.wordsSelected = wordSelected;
         room.initialDictionary.wordsSelected = wordSelected.wordsSelected;
         console.log('words selected: ' + JSON.stringify(room.wordsSelected));
-        console.log('new dictionary: ' + JSON.stringify(room.initialDictionary))
         socket.to(room.roomId).broadcast.emit('wordsSelected', room.wordsSelected);
     });
 
-    socket.on('disconnect', function() {
+    socket.on('disconnect', function(reason) {
         console.log('A player has disconnected: ' + thisPlayerID);
         delete players[thisPlayerID];
         delete sockets[thisPlayerID];
 
+        console.log('disconnect reason' + JSON.stringify(reason))
 
         if(typeof room !== "undefined") {
 
@@ -166,6 +209,7 @@ io.on('connection', function(socket) {
                 if(room.playersInRoom[i].id == thisPlayerID) {
                     console.log('remove player from room');
                     room.playersInRoom.splice(i, 1);
+                    break;
                 };
             };
 
@@ -177,17 +221,25 @@ io.on('connection', function(socket) {
             for (const pl of room.playersInRoom) {
                 if (pl.isHosting) {
                     playerStillHosting = true;
+                    break;
                 }
             }
 
             console.log('players in room' + JSON.stringify(room.playersInRoom));
             
             if (!playerStillHosting) {
-                console.log('player no longer hosting, deleting room: ' + room.roomId);
-                rooms.splice(room.roomArrayIndex, 1);
-                roomIds.splice(room.roomArrayIndex, 1);
+                console.log('no one is hosting, will destroy room soon');
+                room.startRoomDeletionTimer(function() {
+                    room = null;
+                });
             }
-        }         
-        console.log('rooms: ' + rooms);
+        }   
+
+        console.log('number of rooms: ' + rooms.length);      
     });
+
+    socket.on('appPaused', function()
+    {
+        console.log('application is paused');
+    })
 });
