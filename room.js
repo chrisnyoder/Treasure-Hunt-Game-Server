@@ -10,7 +10,7 @@ module.exports = class Room {
         this.roomId = '';
         this.roomArrayIndex; 
         this.initialDictionary = new Object();
-        this.wordsSelected = new Object(); 
+        this.wordsSelected = []; 
         this.gameState = new Object();
         this.playersInRoom = [];
         this.roomDestructionTimer;
