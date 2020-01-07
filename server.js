@@ -1,3 +1,4 @@
+require('console-stamp')(console, { pattern: 'dd/mm/yyyy HH:MM:ss.l' })
 
 const io = require('socket.io')(process.env.PORT || 52300, { pingTimeout: 1800000 });
 const Player = require('./player.js');
@@ -43,7 +44,7 @@ io.on('connection', function(socket) {
                 socket.emit('roomId', { roomId: room.roomId });
                 room.playersInRoom.push(player);
 
-                console.log("number of players in room, server side: " + JSON.stringify(room.playersInRoom));
+                console.log("players in room: " + JSON.stringify(room.playersInRoom));
                 socket.to(room.roomId).emit('numberOfPlayersInRoomChanged', { playersInRoom: room.playersInRoom });
             }
         });
@@ -52,13 +53,12 @@ io.on('connection', function(socket) {
     socket.on('isJoining', function (data) {
         joiningRoomId = data.roomId;
 
-        console.log('isJoining callback received');
         console.log('joining room ' + joiningRoomId + ' as captain');
 
         for (const r of rooms) {
-            console.log('room id: ' + r.roomId);
             if (r.roomId == joiningRoomId) {
                 room = r;
+                room.stopRoomDeletionTimer()
                 break;
             }
         }
@@ -85,12 +85,12 @@ io.on('connection', function(socket) {
     socket.on('isJoiningMainBoard', function(data) {
         joiningRoomId = data.roomId;
 
-        console.log('isJoiningMainBoard callback received');
-        console.log('joining room: ' + joiningRoomId);
+        console.log('joining room ' + joiningRoomId + ' as crew');
 
         for (const r of rooms) {
             if (r.roomId == joiningRoomId) {
                 room = r;
+                room.stopRoomDeletionTimer()
                 break;
             }
         }
@@ -105,22 +105,19 @@ io.on('connection', function(socket) {
             providePlayerInitialDictionary();
             providePlayerWordsSelected();
             updateRoomCount();
-            checkIfCrewMemberShouldStopDeletionTimer();
         }   
     });
 
     socket.on('reconnecting', function(roomId) {
-        console.log('reconnecting callback received');
-        console.log(JSON.stringify(roomId.role));
-
         var reconnectingRoomId = roomId.roomId;
+
+        console.log('attempting to reconnect to room ID: ' + reconnectingRoomId + ' as role: ' + JSON.stringify(roomId.role));
+        
         for (const r of rooms) {
-            console.log('room Id in list ' + r.roomId);
-            console.log('searching for room id: ' + reconnectingRoomId);
             if (r.roomId == reconnectingRoomId) {
                 room = r;
                 socket.join(reconnectingRoomId);
-                console.log('player reconnected to room: ' + r.roomId);
+                console.log('player sucessfully reconnected to room: ' + r.roomId);
                 providePlayerWordsSelected();
                 updateRoomCount();
                 break;
@@ -128,34 +125,16 @@ io.on('connection', function(socket) {
         }
 
         if(typeof room !== 'undefined') {
-            if(roomId.role == 'isHosting') {    
-                checkIfCrewMemberShouldStopDeletionTimer();
+            room.stopRoomDeletionTimer()
+
+            if(roomId.role == 'isHosting') { 
+                player.isHosting = true;   
             } 
             else {
                 player.isHosting = false;
             }
         }
     });
-
-    function checkIfCrewMemberShouldStopDeletionTimer(){
-        var playerAlreadyHostingRoom = false;
-
-        for (const pl of room.playersInRoom) {
-            console.log('player ID' + pl.id);
-            if (pl.isHosting) {
-                playerAlreadyHostingRoom = true;
-                break;
-            }
-        }
-
-        console.log('still a host left: ' + playerAlreadyHostingRoom);
-        
-        if(playerAlreadyHostingRoom == false) {
-            console.log("stopping the deletion timer");
-            room.stopRoomDeletionTimer()
-        }
-        player.isHosting = true;
-    }
 
     function determineJoinedPlayerIndex() {
         var joinedPlayers = []
@@ -241,42 +220,31 @@ io.on('connection', function(socket) {
         delete players[thisPlayerID];
         delete sockets[thisPlayerID];
 
-        console.log('disconnect reason' + JSON.stringify(reason))
+        console.log('disconnect reason: ' + JSON.stringify(reason))
 
         if(typeof room !== "undefined") {
 
             for(var i = 0; i < room.playersInRoom.length; ++i) {
                 if(room.playersInRoom[i].id == thisPlayerID) {
-                    console.log('remove player from room');
+                    console.log('remove player: ' + thisPlayerID + ' from room: ' + room.roomId);
                     room.playersInRoom.splice(i, 1);
+                    console.log('players left in room: ' + room.playersInRoom.length);
+                    console.log(room.playersInRoom);
                     break;
                 };
             };
 
-            // socket.emit('numberOfPlayersInRoomChanged', { playersInRoom: room.playersInRoom })
-            // socket.to(room.roomId).broadcast.emit('numberOfPlayersInRoomChanged', { playersInRoom: room.playersInRoom });
-
-            var playerStillHosting = false;
-
-            for (const pl of room.playersInRoom) {
-                if (pl.isHosting) {
-                    playerStillHosting = true;
-                    break;
-                }
-            }
-
-            console.log('players in room' + JSON.stringify(room.playersInRoom));
-            
-            if (!playerStillHosting) {
-                console.log('no one is hosting, will destroy room soon');
-                room.startRoomDeletionTimer(function() {
-                    console.log('room' + room.roomId)
+            if(room.playersInRoom.length == 0) 
+            {
+                console.log('No one left in room, starting deletion timer for room: ' + room.roomId)
+                room.startRoomDeletionTimer(function () {
+                    console.log('room ' + room.roomId + ' is deleted');
                     room = null;
+                    console.log('list of rooms remaining: ' + rooms);
+                    console.log('number of rooms: ' + rooms.length);   
                 });
             }
-        }   
-
-        console.log('number of rooms: ' + rooms.length);      
+        }      
     });
 
     socket.on('appPaused', function()

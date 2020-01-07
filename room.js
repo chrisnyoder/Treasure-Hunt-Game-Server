@@ -1,4 +1,4 @@
-
+const util = require('util')
 var roomBlackList = ['cunt', 'fuck', 'shit', 'dick', 'cock', 'puta', 'nggr', 'nigr']
 global.roomIds = [];
 global.rooms = [];
@@ -79,7 +79,7 @@ module.exports = class Room {
 
     addRoomToThisInstanceAndGlobalArray(room, callBack) {
 
-        console.log('adding room ID to array to room ID array');
+        console.log('adding room ID ' + room + ' to room ID array');
 
         this.roomId = room;
         roomIds.push(room);
@@ -91,20 +91,19 @@ module.exports = class Room {
         console.log('roomId: ' + this.room);
     }
 
-    startRoomDeletionTimer(callback){
+    startRoomDeletionTimer(callback) {
         this.roomDestructionTimer = setTimeout(function() {
-                console.log('room is being deleted')
                 rooms.splice(this.roomArrayIndex, 1);
                 roomIds.splice(this.roomArrayIndex, 1);
                 callback();
-            }, 600000);
+        }, 3600000);
     }
 
     stopRoomDeletionTimer()
     {
         if(typeof this.roomDestructionTimer !== 'undefined')
         {
-            console.log('deletion timer being cleared')
+            console.log('deletion timer being cleared for room: ' + this.roomId);
             clearTimeout(this.roomDestructionTimer); 
         }
     }
