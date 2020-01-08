@@ -1,8 +1,8 @@
-require('console-stamp')(console, { pattern: 'dd/mm/yyyy HH:MM:ss.l' })
 
 const io = require('socket.io')(process.env.PORT || 52300, { pingTimeout: 1800000 });
 const Player = require('./player.js');
 const Room = require('./room.js');
+require('console-stamp')(console, { pattern: 'dd/mm/yyyy HH:MM:ss.l' })
 
 console.log('Server has started');
 console.log(rooms.length);

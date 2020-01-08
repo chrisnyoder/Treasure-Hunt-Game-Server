@@ -1,4 +1,3 @@
-const util = require('util')
 var roomBlackList = ['cunt', 'fuck', 'shit', 'dick', 'cock', 'puta', 'nggr', 'nigr']
 global.roomIds = [];
 global.rooms = [];

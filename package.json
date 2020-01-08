@@ -9,7 +9,7 @@
   "author": "Christian Yoder",
   "license": "ISC",
   "dependencies": {
-    "console-stamp": "^3.0.0-rc3.0",
+    "console-stamp": "^0.2.9",
     "express": "^4.17.1",
     "nodemon": "^1.19.4",
     "shortid": "^2.2.15",
