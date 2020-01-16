@@ -12,6 +12,8 @@ module.exports = class Room {
         this.wordsSelected = []; 
         this.gameState = new Object();
         this.playersInRoom = [];
+        this.turnTimer;
+        this.timeTakenOnTurn = 0; 
         this.roomDestructionTimer;
     }
 
@@ -84,6 +86,23 @@ module.exports = class Room {
         roomIds.push(room);
         this.roomArrayIndex = (roomIds.length - 1);
         callBack();
+    }
+
+    startTurnTimer(){
+        if(this.turnTimer !== 'undefined')
+        {
+            clearInterval(this.turnTimer);
+        }
+
+        var self = this; 
+        self.timeTakenOnTurn = 0;
+        
+        if(self.timeTakenOnTurn <= 180) {
+            this.turnTimer = setInterval(function () {
+                self.timeTakenOnTurn += 1
+                console.log(self.timeTakenOnTurn);
+            }, 1000);
+        }
     }
 
     results(){

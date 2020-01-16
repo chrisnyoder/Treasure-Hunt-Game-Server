@@ -15,6 +15,7 @@ io.on('connection', function(socket) {
     var player = new Player();
     var thisPlayerID = player.id;
     var room; 
+    var synchTimer; 
 
     console.log('connection made: ' + thisPlayerID);
 
@@ -169,6 +170,16 @@ io.on('connection', function(socket) {
 
             console.log('Dictionary received on server: ' + JSON.stringify(room.initialDictionary));
             socket.to(room.roomId).broadcast.emit('gameDictionary', room.initialDictionary);
+
+            if(synchTimer !== 'undefined')
+            {
+                clearInterval(synchTimer);
+            }
+
+            synchTimer = setInterval(function() {
+                synchronizeTimeLeftinTurn()
+            }, 5 * 1000);
+
         } else 
         {
             console.log('cant send initial game dictionary because not in room')
@@ -178,9 +189,15 @@ io.on('connection', function(socket) {
     socket.on('newGameState', function(newGameState) {
         if(typeof room !== 'undefined')        
         {
+            console.log('previous game state: ' + JSON.stringify(room.gameState.currentGameState));
+            console.log('new game state: ' + JSON.stringify(newGameState.currentGameState));
+
+            if (JSON.stringify(room.gameState.currentGameState) !== JSON.stringify(newGameState.currentGameState)) {
+                room.startTurnTimer();
+            }
+
             room.gameState = newGameState;
 
-            console.log('new game state: ' + JSON.stringify(room.gameState));
             socket.to(room.roomId).broadcast.emit('newGameState', room.gameState);
         } else 
         {
@@ -203,10 +220,10 @@ io.on('connection', function(socket) {
             if(!wordAlreadyInArray) {
                 console.log('word not yet in array of selected words, adding it...');
                 room.wordsSelected.push(wordsSelected.wordSelected);
+                console.log('words selected: ' + JSON.stringify(room.wordsSelected));
             }
 
             room.initialDictionary.wordsAlreadySelected = room.wordsSelected;
-            console.log('words selected: ' + JSON.stringify(room.wordsSelected));
             socket.emit('allWordsSelected', {allWordsSelected: room.wordsSelected} );
             socket.to(room.roomId).broadcast.emit('wordsSelected', {allWordsSelected: room.wordsSelected});
         } else 
@@ -237,6 +254,10 @@ io.on('connection', function(socket) {
             if(room.playersInRoom.length == 0) 
             {
                 console.log('No one left in room, starting deletion timer for room: ' + room.roomId)
+                
+                clearInterval(room.turnTimer);
+                clearInterval(synchTimer);
+
                 room.startRoomDeletionTimer(function () {
                     console.log('room ' + room.roomId + ' is deleted');
                     room = null;
@@ -247,8 +268,21 @@ io.on('connection', function(socket) {
         }      
     });
 
-    socket.on('appPaused', function()
-    {
+    socket.on('restarting', function() {
+        console.log('message to restart received on server');
+        socket.to(room.roomId).broadcast.emit('restarting');
+    });
+
+    socket.on('appPaused', function() {
         console.log('application is paused');
-    })
+    });
+
+    function synchronizeTimeLeftinTurn(){
+        if(this.room !== 'undefined')
+        {
+            console.log('synchronizing time');
+            socket.to(room.roomId).broadcast.emit('timer', { timeTakenOnTurn: room.timeTakenOnTurn });
+            socket.emit('timer', { timeTakenOnTurn : room.timeTakenOnTurn} );
+        }        
+    }
 });
