@@ -89,20 +89,34 @@ module.exports = class Room {
     }
 
     startTurnTimer(){
-        if(this.turnTimer !== 'undefined')
-        {
-            clearInterval(this.turnTimer);
-        }
-
         var self = this; 
-        self.timeTakenOnTurn = 0;
         
-        if(self.timeTakenOnTurn <= 180) {
-            this.turnTimer = setInterval(function () {
+        console.log('timer started');
+
+        self.turnTimer = setInterval(function () {
+            if(self.timeTakenOnTurn < 30) {
                 self.timeTakenOnTurn += 1
-                console.log(self.timeTakenOnTurn);
-            }, 1000);
+                console.log('time elapsed: ' + self.timeTakenOnTurn);
+            } 
+        }, 1000);
+    }
+
+    toggleTurnTimer() {
+        if (this.turnTimer !== 'undefined') {
+            clearInterval(this.turnTimer);
+            this.turnTimer = null;
+        } else {
+            this.startTurnTimer();
         }
+    }
+
+    resetTurnTimer() {
+        if (this.turnTimer !== 'undefined') {
+            clearInterval(this.turnTimer);
+            this.turnTimer = null;
+        }
+        this.timeTakenOnTurn = 0;
+        console.log('time interval now: ' + this.timeTakenOnTurn);
     }
 
     results(){

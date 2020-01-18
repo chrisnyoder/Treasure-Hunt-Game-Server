@@ -193,6 +193,7 @@ io.on('connection', function(socket) {
             console.log('new game state: ' + JSON.stringify(newGameState.currentGameState));
 
             if (JSON.stringify(room.gameState.currentGameState) !== JSON.stringify(newGameState.currentGameState)) {
+                room.resetTurnTimer();
                 room.startTurnTimer();
             }
 
@@ -280,9 +281,17 @@ io.on('connection', function(socket) {
     function synchronizeTimeLeftinTurn(){
         if(this.room !== 'undefined')
         {
-            console.log('synchronizing time');
             socket.to(room.roomId).broadcast.emit('timer', { timeTakenOnTurn: room.timeTakenOnTurn });
             socket.emit('timer', { timeTakenOnTurn : room.timeTakenOnTurn} );
         }        
     }
+
+    socket.on('pausing', function(callback) {
+        if(this.room !== 'undefined')
+        {
+            console.log('game pausing');
+            room.toggleTurnTimer();
+            callback();
+        }
+    });
 });
