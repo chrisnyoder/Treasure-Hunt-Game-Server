@@ -192,13 +192,14 @@ io.on('connection', function(socket) {
             console.log('previous game state: ' + JSON.stringify(room.gameState.currentGameState));
             console.log('new game state: ' + JSON.stringify(newGameState.currentGameState));
 
-            if (JSON.stringify(room.gameState.currentGameState) !== JSON.stringify(newGameState.currentGameState)) {
+            if ((JSON.stringify(room.gameState.currentGameState) !== JSON.stringify(newGameState.currentGameState)) && room.turnTimer !== null) {
                 room.resetTurnTimer();
                 room.startTurnTimer();
             }
 
             room.gameState = newGameState;
-
+            
+            console.log('game state to emit: ' + JSON.stringify(room.gameState));
             socket.to(room.roomId).broadcast.emit('newGameState', room.gameState);
         } else 
         {
@@ -255,13 +256,13 @@ io.on('connection', function(socket) {
             if(room.playersInRoom.length == 0) 
             {
                 console.log('No one left in room, starting deletion timer for room: ' + room.roomId)
-                
-                clearInterval(room.turnTimer);
-                clearInterval(synchTimer);
-
                 room.startRoomDeletionTimer(function () {
                     console.log('room ' + room.roomId + ' is deleted');
+
+                    clearInterval(room.turnTimer);
+                    clearInterval(synchTimer);
                     room = null;
+
                     console.log('list of rooms remaining: ' + rooms);
                     console.log('number of rooms: ' + rooms.length);   
                 });
@@ -269,20 +270,14 @@ io.on('connection', function(socket) {
         }      
     });
 
-    socket.on('restarting', function() {
-        console.log('message to restart received on server');
-        socket.to(room.roomId).broadcast.emit('restarting');
-    });
-
-    socket.on('appPaused', function() {
-        console.log('application is paused');
-    });
-
     function synchronizeTimeLeftinTurn(){
         if(this.room !== 'undefined')
         {
-            socket.to(room.roomId).broadcast.emit('timer', { timeTakenOnTurn: room.timeTakenOnTurn });
-            socket.emit('timer', { timeTakenOnTurn : room.timeTakenOnTurn} );
+            socket.to(room.roomId).broadcast.emit('timer', { timeTakenOnTurn: room.timeTakenOnTurn});
+            socket.emit('timer', { timeTakenOnTurn: room.timeTakenOnTurn} );
+
+            socket.to(room.roomId).broadcast.emit('newGameState', room.gameState);
+            socket.emit('newGameState', room.gameState);
         }        
     }
 
@@ -291,6 +286,13 @@ io.on('connection', function(socket) {
         {
             console.log('game pausing');
             room.toggleTurnTimer();
+            
+            if (room.turnTimer == null) {
+                socket.to(room.roomId).broadcast.emit('pausing');
+            } else {
+                socket.to(room.roomId).broadcast.emit('unpausing');
+            }
+            
             callback();
         }
     });

@@ -94,7 +94,7 @@ module.exports = class Room {
         console.log('timer started');
 
         self.turnTimer = setInterval(function () {
-            if(self.timeTakenOnTurn < 30) {
+            if(self.timeTakenOnTurn < 180) {
                 self.timeTakenOnTurn += 1
                 console.log('time elapsed: ' + self.timeTakenOnTurn);
             } 
@@ -102,11 +102,11 @@ module.exports = class Room {
     }
 
     toggleTurnTimer() {
-        if (this.turnTimer !== 'undefined') {
+        if(this.turnTimer == null){
+            this.startTurnTimer();
+        } else {
             clearInterval(this.turnTimer);
             this.turnTimer = null;
-        } else {
-            this.startTurnTimer();
         }
     }
 
