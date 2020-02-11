@@ -102,6 +102,9 @@ module.exports = class Room {
     }
 
     toggleTurnTimer() {
+
+        console.log('toggle turn timer function being called');
+
         if(this.turnTimer == null){
             this.startTurnTimer();
         } else {
@@ -113,7 +116,7 @@ module.exports = class Room {
     resetTurnTimer() {
         if (this.turnTimer !== 'undefined') {
             clearInterval(this.turnTimer);
-            this.turnTimer = null;
+            this.turnTimer = 'undefined';
         }
         this.timeTakenOnTurn = 0;
         console.log('time interval now: ' + this.timeTakenOnTurn);

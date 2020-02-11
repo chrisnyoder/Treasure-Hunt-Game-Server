@@ -167,6 +167,7 @@ io.on('connection', function(socket) {
         {
             room.initialDictionary = data;
             room.wordsSelected = room.initialDictionary.wordsAlreadySelected;
+            room.timeTakenOnTurn = 0;
 
             console.log('Dictionary received on server: ' + JSON.stringify(room.initialDictionary));
             socket.to(room.roomId).broadcast.emit('gameDictionary', room.initialDictionary);
@@ -192,9 +193,20 @@ io.on('connection', function(socket) {
             console.log('previous game state: ' + JSON.stringify(room.gameState.currentGameState));
             console.log('new game state: ' + JSON.stringify(newGameState.currentGameState));
 
-            if ((JSON.stringify(room.gameState.currentGameState) !== JSON.stringify(newGameState.currentGameState)) && room.turnTimer !== null) {
-                room.resetTurnTimer();
-                room.startTurnTimer();
+            if(room.turnTimer !== null)
+            {
+                if (JSON.stringify(newGameState.currentGameState) == '3' || JSON.stringify(newGameState.currentGameState)) {
+                    if (room.gameState.currentGameState !== newGameState.currentGameState) {
+                        console.log('starting room timer');
+                        room.resetTurnTimer();
+                        room.startTurnTimer();
+                    }
+                }
+
+                if (JSON.stringify(newGameState.currentGameState) == '1' || JSON.stringify(newGameState.currentGameState) == '5' || JSON.stringify(newGameState.currentGameState) == '6' || JSON.stringify(newGameState.currentGameState) == '7') {
+                    console.log('game is restarting or has ended');
+                    room.resetTurnTimer();
+                }
             }
 
             room.gameState = newGameState;
