@@ -73,18 +73,19 @@ io.on('connection', function(socket) {
             socket.join(joiningRoomId);
 
             console.log('joined room ' + joiningRoomId + ' as captain')
+            updateRoomCount();
             
             var joinedPlayerIndex = determineJoinedPlayerIndex();
             room.initialDictionary.playerIndex = joinedPlayerIndex;
 
             providePlayerInitialDictionary();
             providePlayerWordsSelected();
-            updateRoomCount();
         }   
     });
 
     socket.on('isJoiningMainBoard', function(data) {
         joiningRoomId = data.roomId;
+        player.isHosting = true;
 
         console.log('joining room ' + joiningRoomId + ' as crew');
 
@@ -144,6 +145,7 @@ io.on('connection', function(socket) {
                 joinedPlayers.push(room.playersInRoom[i])
             }
         }
+        console.log('player index number: ' + joinedPlayers.length - 1)
         return (joinedPlayers.length - 1);
     }
 
